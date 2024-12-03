@@ -2,39 +2,83 @@
 
 const int windowWidth = 800;
 const int windowHeight = 300;
-const int dinoWidth = 40;
-const int dinoHeight = 40;
-const int obstacleWidth = 20;
-const int obstacleHeight = 40;
 const int groundHeight = 50;
 const int gravity = 1;
 const int jumpStrength = 15;
 
-struct Obstacle {
+class Dino {
+public:
     Rectangle rect;
-    int speed;
+    bool isJumping;
+    int jumpVelocity;
+
+    Dino(int x, int y, int width, int height)
+        : rect{ x, y, width, height }, isJumping(false), jumpVelocity(0) {}
+
+    void Draw() const {
+        DrawRectangleRec(rect, GREEN);
+        DrawFace();
+    }
+
+    void Jump() {
+        if (!isJumping) {
+            isJumping = true;
+            jumpVelocity = -jumpStrength;
+        }
+    }
+
+    void Update() {
+        if (isJumping) {
+            rect.y += jumpVelocity;
+            jumpVelocity += gravity;
+
+            if (rect.y >= windowHeight - groundHeight - rect.height) {
+                rect.y = windowHeight - groundHeight - rect.height;
+                isJumping = false;
+            }
+        }
+    }
+
+private:
+    void DrawFace() const {
+        int eyeOffsetX = 8;
+        int eyeOffsetY = 10;
+        int eyeRadius = 5;
+
+        DrawCircle(rect.x + eyeOffsetX, rect.y + eyeOffsetY, eyeRadius, BLACK);
+        DrawCircle(rect.x + eyeOffsetX + 12, rect.y + eyeOffsetY, eyeRadius, BLACK);
+
+        int mouthOffsetY = 25;
+        DrawLine(rect.x + 5, rect.y + mouthOffsetY, rect.x + 35, rect.y + mouthOffsetY, DARKGRAY);
+    }
 };
 
-void DrawDinoFace(Rectangle dino) {
-    int eyeOffsetX = 8;
-    int eyeOffsetY = 10;
-    int eyeRadius = 5;
+class Obstacle {
+public:
+    Rectangle rect;
+    int speed;
 
-    DrawCircle(dino.x + eyeOffsetX, dino.y + eyeOffsetY, eyeRadius, BLACK);
-    DrawCircle(dino.x + eyeOffsetX + 12, dino.y + eyeOffsetY, eyeRadius, BLACK);
+    Obstacle(int x, int y, int width, int height, int speed)
+        : rect{ x, y, width, height }, speed(speed) {}
 
-    int mouthOffsetY = 25;
-    DrawLine(dino.x + 5, dino.y + mouthOffsetY, dino.x + 35, dino.y + mouthOffsetY, DARKGRAY);
-}
+    void Draw() const {
+        DrawRectangleRec(rect, DARKGRAY);
+    }
+
+    void Update() {
+        rect.x -= speed;
+
+        if (rect.x + rect.width < 0) {
+            rect.x = windowWidth;
+        }
+    }
+};
 
 int main() {
     InitWindow(windowWidth, windowHeight, "Google Dinosaur Game");
 
-    Rectangle dino = { 100, windowHeight - groundHeight - dinoHeight, dinoWidth, dinoHeight };
-    bool isJumping = false;
-    int jumpVelocity = 0;
-
-    Obstacle obstacle = { {windowWidth, windowHeight - groundHeight - obstacleHeight, obstacleWidth, obstacleHeight}, 5 };
+    Dino dino(100, windowHeight - groundHeight - 40, 40, 40);
+    Obstacle obstacle(windowWidth, windowHeight - groundHeight - 40, 20, 40, 5);
 
     int score = 0;
     bool gameOver = false;
@@ -46,15 +90,15 @@ int main() {
             if (IsKeyPressed(KEY_R)) {
                 score = 0;
                 gameOver = false;
-                dino.y = windowHeight - groundHeight - dinoHeight;
+                dino.rect.y = windowHeight - groundHeight - dino.rect.height;
                 obstacle.rect.x = windowWidth;
             }
             else {
                 BeginDrawing();
                 ClearBackground(RAYWHITE);
                 DrawRectangle(0, windowHeight - groundHeight, windowWidth, groundHeight, DARKGRAY);
-                DrawRectangleRec(dino, GREEN);
-                DrawRectangleRec(obstacle.rect, DARKGRAY);
+                dino.Draw();
+                obstacle.Draw();
                 DrawText(TextFormat("Score: %d", score), 10, 10, 20, BLACK);
                 DrawText("Game Over! Press 'R' to Replay", windowWidth / 2 - 150, windowHeight / 2, 20, RED);
                 EndDrawing();
@@ -62,30 +106,19 @@ int main() {
             }
         }
 
-        if (IsKeyPressed(KEY_SPACE) && !isJumping) {
-            isJumping = true;
-            jumpVelocity = -jumpStrength;
+        if (IsKeyPressed(KEY_SPACE)) {
+            dino.Jump();
         }
 
-        if (isJumping) {
-            dino.y += jumpVelocity;
-            jumpVelocity += gravity;
-
-            if (dino.y >= windowHeight - groundHeight - dinoHeight) {
-                dino.y = windowHeight - groundHeight - dinoHeight;
-                isJumping = false;
-            }
-        }
-
-        obstacle.rect.x -= obstacle.speed;
+        dino.Update();
+        obstacle.Update();
 
         if (obstacle.rect.x + obstacle.rect.width < 0) {
-            obstacle.rect.x = windowWidth;
-            obstacle.rect.y = windowHeight - groundHeight - obstacleHeight;
             score++;
+            obstacle.rect.x = windowWidth;
         }
 
-        if (CheckCollisionRecs(dino, obstacle.rect)) {
+        if (CheckCollisionRecs(dino.rect, obstacle.rect)) {
             gameOver = true;
         }
 
@@ -93,9 +126,8 @@ int main() {
         ClearBackground(RAYWHITE);
 
         DrawRectangle(0, windowHeight - groundHeight, windowWidth, groundHeight, DARKGRAY);
-        DrawRectangleRec(dino, GREEN);
-        DrawDinoFace(dino);
-        DrawRectangleRec(obstacle.rect, DARKGRAY);
+        dino.Draw();
+        obstacle.Draw();
         DrawText(TextFormat("Score: %d", score), 10, 10, 20, BLACK);
 
         EndDrawing();
